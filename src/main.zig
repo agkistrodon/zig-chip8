@@ -1,8 +1,11 @@
 const std = @import("std");
+const Device = @import("device.zig").Device;
 const Display = @import("display.zig").Display;
 const Bitmap = @import("bitmap.zig").Bitmap;
 
-pub fn main() !void {
+pub fn main(init: std.process.Init) !void {
+    const io = init.io;
+
     var gpa = std.heap.DebugAllocator(.{}){};
     const allocator = gpa.allocator();
     defer {
@@ -10,6 +13,14 @@ pub fn main() !void {
         if (leaked == .leak) {
             @panic("MEMORY LEAK");
         }
+    }
+
+    var device = try Device.create(allocator);
+    defer device.free();
+
+    if (!device.loadROM(io, "roms/blitz.rom")) {
+        std.debug.print("Failed to load CHIP-8 ROM\n", .{});
+        return;
     }
 
     var bitmap = try Bitmap.create(allocator, 64, 32);
