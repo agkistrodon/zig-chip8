@@ -56,7 +56,7 @@ pub const Display = struct {
             .framebuffer = framebuffer,
             .framebuffer_width = framebuffer_width,
             .framebuffer_height = framebuffer_height,
-            .keys = std.mem.zeros([16]bool),
+            .keys = std.mem.zeroes([16]bool),
         };
     }
 

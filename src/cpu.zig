@@ -18,11 +18,13 @@ pub const CPU = struct {
     paused: bool,
     paused_x: u8,
     speed: u8,
+    rng: std.Random.DefaultPrng,
 
     pub fn create(
         memory: *[]u8, // Pointer to device memory
         bitmap: *Bitmap,
         display: *Display,
+        seed: u64,
     ) Self {
         return Self{
             .memory = memory,
@@ -38,6 +40,7 @@ pub const CPU = struct {
             .paused = false,
             .paused_x = 0, // For storing key press after un-pausing
             .speed = 10,
+            .rng = std.Random.DefaultPrng.init(seed),
         };
     }
 
@@ -229,13 +232,8 @@ pub const CPU = struct {
             },
             0xC000 => {
                 // RND Vx, byte: generate a random number 0-255, AND it with byte, store in Vx
-                const seed: u64 = 11111;
-                std.os.getrandom(std.mem.asBytes(&seed)) catch {};
-
-                const rnd = std.rand.DefaultPrng.init(seed);
-                const num = rnd.random().int(u8);
-
-                self.v[x] = num & (@as(u8, @truncate(opcode)) & 0xFF);
+                const num = self.rng.random().int(u8);
+                self.v[x] = num & @as(u8, @truncate(opcode));
             },
             0xD000 => {
                 // DRW Vx, Vy, nibble: display n-byte sprite
@@ -254,13 +252,11 @@ pub const CPU = struct {
                         if (px + col >= self.bitmap.width) continue;
                         if (py + row >= self.bitmap.height) continue;
 
-                        if ((sprite & 0x80) > 0) {
+                        if (((sprite >> @intCast(7 - col)) & 1) == 1) {
                             if (self.bitmap.setPixel(px + col, py + row)) {
                                 self.v[0xF] = 1;
                             }
                         }
-
-                        sprite << 1;
                     }
                 }
             },
